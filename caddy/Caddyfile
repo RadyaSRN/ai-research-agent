@@ -1,0 +1,9 @@
+{$N8N_HOST} {
+    reverse_proxy n8n:5678
+    tls {$ACME_EMAIL}
+}
+
+{$LANGFUSE_HOST} {
+    reverse_proxy langfuse-web:3000
+    tls {$ACME_EMAIL}
+}

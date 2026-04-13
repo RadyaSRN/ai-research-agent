@@ -1,0 +1,5 @@
+CREATE DATABASE app;
+
+\c app
+
+CREATE EXTENSION IF NOT EXISTS vector;
