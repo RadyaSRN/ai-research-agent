@@ -1,0 +1,28 @@
+{
+  "description": "Actual top-5 semantic_search output per idea, used as bench dataset (production-faithful).",
+  "pairs": [
+    {"idea_id": "f0e2cc18-9245-4318-b777-45ced0e3105c", "idea_title": "Entropy-weighted token-level advantage in GRPO", "arxiv_id": "2604.12736v1", "rank": 1},
+    {"idea_id": "f0e2cc18-9245-4318-b777-45ced0e3105c", "idea_title": "Entropy-weighted token-level advantage in GRPO", "arxiv_id": "2510.06870v2", "rank": 2},
+    {"idea_id": "f0e2cc18-9245-4318-b777-45ced0e3105c", "idea_title": "Entropy-weighted token-level advantage in GRPO", "arxiv_id": "2510.00977v2", "rank": 3},
+    {"idea_id": "f0e2cc18-9245-4318-b777-45ced0e3105c", "idea_title": "Entropy-weighted token-level advantage in GRPO", "arxiv_id": "2602.03309v1", "rank": 4},
+    {"idea_id": "f0e2cc18-9245-4318-b777-45ced0e3105c", "idea_title": "Entropy-weighted token-level advantage in GRPO", "arxiv_id": "2603.28204v2", "rank": 5},
+
+    {"idea_id": "97638342-6a91-4949-8476-fa080981ecee", "idea_title": "Adaptive group size in GRPO by prompt difficulty", "arxiv_id": "2510.00977v2", "rank": 1},
+    {"idea_id": "97638342-6a91-4949-8476-fa080981ecee", "idea_title": "Adaptive group size in GRPO by prompt difficulty", "arxiv_id": "2603.21177v1", "rank": 2},
+    {"idea_id": "97638342-6a91-4949-8476-fa080981ecee", "idea_title": "Adaptive group size in GRPO by prompt difficulty", "arxiv_id": "2601.03661v1", "rank": 3},
+    {"idea_id": "97638342-6a91-4949-8476-fa080981ecee", "idea_title": "Adaptive group size in GRPO by prompt difficulty", "arxiv_id": "2603.01106v1", "rank": 4},
+    {"idea_id": "97638342-6a91-4949-8476-fa080981ecee", "idea_title": "Adaptive group size in GRPO by prompt difficulty", "arxiv_id": "2505.09655v4", "rank": 5},
+
+    {"idea_id": "72a1d61d-690c-461a-9cdb-88575eda1b8a", "idea_title": "CFG in latent activation space", "arxiv_id": "2603.03281v2", "rank": 1},
+    {"idea_id": "72a1d61d-690c-461a-9cdb-88575eda1b8a", "idea_title": "CFG in latent activation space", "arxiv_id": "2506.11039v1", "rank": 2},
+    {"idea_id": "72a1d61d-690c-461a-9cdb-88575eda1b8a", "idea_title": "CFG in latent activation space", "arxiv_id": "2505.20199v1", "rank": 3},
+    {"idea_id": "72a1d61d-690c-461a-9cdb-88575eda1b8a", "idea_title": "CFG in latent activation space", "arxiv_id": "2509.22007v2", "rank": 4},
+    {"idea_id": "72a1d61d-690c-461a-9cdb-88575eda1b8a", "idea_title": "CFG in latent activation space", "arxiv_id": "2406.08070v2", "rank": 5},
+
+    {"idea_id": "5758e186-8ef8-4226-9f09-a96b69893494", "idea_title": "Alternative control surfaces in CFG-ctrl", "arxiv_id": "2603.03281v2", "rank": 1},
+    {"idea_id": "5758e186-8ef8-4226-9f09-a96b69893494", "idea_title": "Alternative control surfaces in CFG-ctrl", "arxiv_id": "2406.08070v2", "rank": 2},
+    {"idea_id": "5758e186-8ef8-4226-9f09-a96b69893494", "idea_title": "Alternative control surfaces in CFG-ctrl", "arxiv_id": "2503.18886v2", "rank": 3},
+    {"idea_id": "5758e186-8ef8-4226-9f09-a96b69893494", "idea_title": "Alternative control surfaces in CFG-ctrl", "arxiv_id": "2505.20199v1", "rank": 4},
+    {"idea_id": "5758e186-8ef8-4226-9f09-a96b69893494", "idea_title": "Alternative control surfaces in CFG-ctrl", "arxiv_id": "2509.22007v2", "rank": 5}
+  ]
+}

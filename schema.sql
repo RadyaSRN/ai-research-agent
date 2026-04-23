@@ -283,11 +283,79 @@ CREATE TRIGGER update_ideas_updated_at
 
 
 -- ============================================================================
--- Готово!
+-- DIGEST_SCHEDULES
 -- ============================================================================
--- Чтобы проверить, что всё создалось:
---   \dt                         -- список таблиц
---   \d+ papers                  -- детали таблицы
---   SELECT * FROM pg_extension; -- расширения (должен быть vector)
+-- Расписания дайджестов. Один user = одна запись.
 -- ============================================================================
 
+CREATE TABLE IF NOT EXISTS digest_schedules (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    is_enabled  BOOLEAN NOT NULL DEFAULT TRUE,
+    send_time   TIME NOT NULL,
+    timezone    TEXT NOT NULL DEFAULT 'Europe/Moscow',
+    next_run_at TIMESTAMPTZ,
+    last_run_at TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id)
+);
+
+COMMENT ON TABLE digest_schedules IS 'Расписания daily digest; один user — одна запись';
+COMMENT ON COLUMN digest_schedules.send_time IS 'Локальное время отправки (без даты)';
+COMMENT ON COLUMN digest_schedules.timezone IS 'IANA timezone для вычисления next_run_at';
+COMMENT ON COLUMN digest_schedules.next_run_at IS 'Следующий запуск в UTC; пересчитывается при каждом set';
+
+CREATE INDEX IF NOT EXISTS idx_digest_schedules_next_run
+    ON digest_schedules (next_run_at)
+    WHERE is_enabled = TRUE;
+
+DROP TRIGGER IF EXISTS set_timestamp_digest_schedules ON digest_schedules;
+CREATE TRIGGER set_timestamp_digest_schedules
+    BEFORE UPDATE ON digest_schedules
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+-- ============================================================================
+-- PAPER_METRICS
+-- ============================================================================
+-- Метрики статей.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS paper_metrics (
+    paper_id                   UUID PRIMARY KEY REFERENCES papers(id) ON DELETE CASCADE,
+    citation_count             INT,
+    reference_count            INT,
+    fields_of_study            TEXT[],
+    venue                      TEXT,
+    year                       INT,
+    open_access_pdf_url        TEXT,
+    doi                        TEXT,
+    source                     TEXT NOT NULL DEFAULT 'openalex',
+    found                      BOOLEAN NOT NULL DEFAULT true,
+    fetched_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),
+    stale_after                TIMESTAMPTZ NOT NULL DEFAULT now() + INTERVAL '7 days'
+);
+
+CREATE INDEX IF NOT EXISTS idx_paper_metrics_stale ON paper_metrics(stale_after);
+
+
+-- ============================================================================
+-- ALERT_BUCKETS
+-- ============================================================================
+-- Дедуп-таблица для алертинга. Каждая (alert_key, bucket_id) пара записывается
+-- максимум один раз, что позволяет слать алерт один раз в пределах временного
+-- бакета (час / день). Вставка через ON CONFLICT DO NOTHING RETURNING —
+-- если строка вернулась, это первый алерт в бакете; если пустая — уже слали.
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS alert_buckets (
+    alert_key        TEXT         NOT NULL,
+    bucket_id        TEXT         NOT NULL,
+    fired_at         TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    cost_value       NUMERIC,
+    threshold_value  NUMERIC,
+    PRIMARY KEY (alert_key, bucket_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_buckets_fired_at ON alert_buckets(fired_at DESC);
