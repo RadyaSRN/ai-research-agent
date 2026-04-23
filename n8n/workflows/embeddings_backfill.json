@@ -1,0 +1,244 @@
+{
+  "updatedAt": "2026-04-22T17:53:13.577Z",
+  "createdAt": "2026-04-22T09:16:12.264Z",
+  "id": "4AcMkI588vqhL5C7",
+  "name": "embeddings_backfill",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9ebaf22d-bbf3-406d-9462-1c4d31704bea",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "openai/text-embedding-3-small"
+            },
+            {
+              "name": "=input",
+              "value": "={{$json.embedding_text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        640,
+        -16
+      ],
+      "id": "14943019-4267-4d16-ad63-b07800cd8226",
+      "name": "HTTP Request (embeddings)",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "C7XbAdHRTFBddFsD",
+          "name": "OpenRouter API Key"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO paper_embeddings (paper_id, embedding, embedding_model_version)\nVALUES (\n  '{{ $('Find papers without embeddings').item.json.paper_id }}',\n  '{{ JSON.stringify($json.data[0].embedding) }}',\n  '{{ $json.model }}'\n)\nON CONFLICT (paper_id) DO NOTHING;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1136,
+        -32
+      ],
+      "id": "d5dcb563-d284-45af-8c3e-ea0d65641092",
+      "name": "Postgres (paper_embeddings)",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "028863fb-b0a7-47d8-9505-f72f3433dcb5",
+              "leftValue": "={{ $json.object }}",
+              "rightValue": "list",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        864,
+        -16
+      ],
+      "id": "bcece9c2-d680-40a4-9947-52afbad5ac3f",
+      "name": "IF got embedding"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.id AS paper_id,\n       p.arxiv_id,\n       p.title || E'\\n\\n' || p.abstract AS embedding_text\nFROM papers p\nLEFT JOIN paper_embeddings pe ON pe.paper_id = p.id\nWHERE pe.paper_id IS NULL\nORDER BY p.created_at DESC\nLIMIT 100;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        304,
+        0
+      ],
+      "id": "020933d9-8aba-4909-a3f7-441cb8fa2c2f",
+      "name": "Find papers without embeddings",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Find papers without embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (embeddings)": {
+      "main": [
+        [
+          {
+            "node": "IF got embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF got embedding": {
+      "main": [
+        [
+          {
+            "node": "Postgres (paper_embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find papers without embeddings": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9qLJPkzSbPAxHeud",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "6f383161-7753-4380-ae55-29edf2acdb0c",
+  "activeVersionId": "6f383161-7753-4380-ae55-29edf2acdb0c",
+  "versionCounter": 36,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-22T09:16:12.264Z",
+      "createdAt": "2026-04-22T09:16:12.264Z",
+      "role": "workflow:owner",
+      "workflowId": "4AcMkI588vqhL5C7",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 6f383161",
+    "description": ""
+  }
+}

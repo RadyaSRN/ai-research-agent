@@ -3,7 +3,7 @@
 -- ============================================================================
 -- Полная схема для персонального research companion.
 -- Накатывается одной командой:
---   docker compose exec -T postgres psql -U postgres -d app < schema.sql
+--   docker compose exec -T postgres psql -U postgres -d app < postgres/schema.sql
 -- ============================================================================
 
 -- Расширения

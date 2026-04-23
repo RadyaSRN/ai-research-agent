@@ -1,0 +1,225 @@
+{
+  "updatedAt": "2026-04-22T08:00:11.541Z",
+  "createdAt": "2026-04-14T16:52:27.400Z",
+  "id": "wsrsedBE9ooBeECD",
+  "name": "semantic_search_papers",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "openai/text-embedding-3-small"
+            },
+            {
+              "name": "=input",
+              "value": "={{$json.query}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        0
+      ],
+      "id": "243c02b0-6741-42a3-bae5-d8b6a6100f58",
+      "name": "HTTP Request (embeddings)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "C7XbAdHRTFBddFsD",
+          "name": "OpenRouter API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "query"
+            },
+            {
+              "name": "top_k",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -32,
+        16
+      ],
+      "id": "965503a2-a8c3-4637-bdbd-a9c0abd9f4b6",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c57f919d-8206-41a3-8a60-5f6c4e70a44d",
+              "name": "=query",
+              "value": "={{$json.query || \"mechanistic interpretability\"}}",
+              "type": "string"
+            },
+            {
+              "id": "ad3d2b60-6ab4-44fe-a507-ea48666fcec1",
+              "name": "=top_k",
+              "value": "={{$json.top_k || 5}}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        16
+      ],
+      "id": "1dadf8cb-6d4e-46ca-86bb-07da341e5f37",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      query: $('Set').item.json.query,\n      top_k: $('Set').item.json.top_k,\n      results: items.map((item) => ({\n        arxiv_id: item.json.arxiv_id,\n        title: item.json.title,\n        abstract: item.json.abstract,\n        authors: item.json.authors,\n        url: item.json.url,\n        published_at: item.json.published_at,\n        distance: item.json.distance,\n      })),\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        -16
+      ],
+      "id": "8bed6be0-77a2-4b04-b96b-dde05c74b806",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  p.id,\n  p.arxiv_id,\n  p.title,\n  p.abstract,\n  p.authors,\n  p.url,\n  p.published_at,\n  pe.embedding <=> '{{ JSON.stringify($('HTTP Request (embeddings)').item.json.data[0].embedding) }}'::vector AS distance\nFROM paper_embeddings pe\nJOIN papers p ON p.id = pe.paper_id\nORDER BY pe.embedding <=> '{{ JSON.stringify($('HTTP Request (embeddings)').item.json.data[0].embedding) }}'::vector\nLIMIT {{ $('Set').item.json.top_k }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        0
+      ],
+      "id": "1ddf5054-ad8c-44da-8c1b-f05a7b816b9d",
+      "name": "Vector Search",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "HTTP Request (embeddings)": {
+      "main": [
+        [
+          {
+            "node": "Vector Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Search": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "ce78dcd8-8d2c-4dc2-8b4a-c9f62d8d7dac",
+  "activeVersionId": "ce78dcd8-8d2c-4dc2-8b4a-c9f62d8d7dac",
+  "versionCounter": 72,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-14T16:52:27.400Z",
+      "createdAt": "2026-04-14T16:52:27.400Z",
+      "role": "workflow:owner",
+      "workflowId": "wsrsedBE9ooBeECD",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version ce78dcd8",
+    "description": ""
+  }
+}

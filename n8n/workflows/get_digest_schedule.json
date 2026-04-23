@@ -1,0 +1,159 @@
+{
+  "updatedAt": "2026-04-21T10:14:26.833Z",
+  "createdAt": "2026-04-15T16:15:03.988Z",
+  "id": "45KGFTgoIQCSLToX",
+  "name": "get_digest_schedule",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ab05b4f5-7423-48a7-b0b5-a6996e262619",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "98d81231-1e41-4856-bc36-74e7c158efa6",
+              "name": "user_id",
+              "value": "={{ $json.user_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "455a7e7e-33c8-4b5f-ae32-1ff301eea0e7",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  is_enabled,\n  send_time::TEXT,\n  timezone,\n  next_run_at,\n  last_run_at\nFROM digest_schedules\nWHERE user_id = '{{ $('Set').item.json.user_id }}'\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ffaa693d-16e4-415f-b419-688f8afff643",
+      "name": "Get schedule",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "if (items.length === 0 || !items[0].json.send_time) {\n  return [{\n    json: {\n      success: true,\n      schedule: null,\n      message: \"No digest schedule configured for this user.\"\n    }\n  }];\n}\nconst s = items[0].json;\nreturn [{\n  json: {\n    success: true,\n    schedule: {\n      is_enabled: s.is_enabled,\n      send_time: s.send_time,\n      timezone: s.timezone,\n      next_run_at: s.next_run_at,\n      last_run_at: s.last_run_at,\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "d0e34346-f3f8-4e21-b727-e5bfe51ba4c4",
+      "name": "Return result"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Get schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get schedule": {
+      "main": [
+        [
+          {
+            "node": "Return result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "c5ff5239-eeca-4209-b6a3-e37eae0cf8ff",
+  "activeVersionId": "c5ff5239-eeca-4209-b6a3-e37eae0cf8ff",
+  "versionCounter": 19,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T16:15:03.988Z",
+      "createdAt": "2026-04-15T16:15:03.988Z",
+      "role": "workflow:owner",
+      "workflowId": "45KGFTgoIQCSLToX",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version c5ff5239",
+    "description": ""
+  }
+}

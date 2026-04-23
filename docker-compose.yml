@@ -234,6 +234,11 @@ services:
       SHIPPER_CHECKPOINT_DIR: /data
       ROOT_SPAN_INPUT_NODE: "When Executed by Another Workflow"
       ROOT_SPAN_OUTPUT_NODE: "Return"
+      # Сливаем bench-трейс (создан run_bench.py) с трейсом shipper'а.
+      # Shipper ищет "<этот-ключ>":"<32-hex>" в сериализованном run-data
+      # воркфлоу; если нашёл — использует это как OTLP trace_id, и спаны
+      # уезжают в тот же самый Langfuse-трейс, что создал bench.
+      LANGFUSE_TRACE_ID_FIELD_NAME: langfuse_trace_id
     volumes:
       - shipper_data:/data
     networks:

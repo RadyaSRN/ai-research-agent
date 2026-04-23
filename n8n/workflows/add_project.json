@@ -1,0 +1,248 @@
+{
+  "updatedAt": "2026-04-23T12:58:44.448Z",
+  "createdAt": "2026-04-14T17:48:19.714Z",
+  "id": "HdQOUq7YtK3Noptx",
+  "name": "add_project",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "title"
+            },
+            {
+              "name": "description"
+            },
+            {
+              "name": "keywords"
+            },
+            {
+              "name": "user_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0c8b9e0f-4ad7-4ba8-9403-4c0fac3e95ef",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1c46ca47-f445-4c46-a895-57c24d70034c",
+              "name": "=title",
+              "value": "={{$json.title}}",
+              "type": "string"
+            },
+            {
+              "id": "1f0053ee-0652-44d5-9a9e-5a839d1d2966",
+              "name": "description",
+              "value": "={{$json.description || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "7ab68775-9aa5-4aab-8df7-082f5251a289",
+              "name": "keywords",
+              "value": "={{$json.keywords || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "b6c4d990-d3be-4257-8afe-d3d0a049fe57",
+              "name": "user_id",
+              "value": "={{$json.user_id}}",
+              "type": "string"
+            },
+            {
+              "id": "03582ce6-a250-4845-834e-cbf6f9181d5c",
+              "name": "keywords_pg",
+              "value": "={{\"{\" + (($json.keywords || \"\").split(\",\").map((s) => s.trim()).filter(Boolean).map((s) => \"\\\"\" + s.replace(/\\\\/g, \"\\\\\\\\\").replace(/\"/g, \"\\\\\\\"\") + \"\\\"\")).join(\",\") + \"}\"}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e9a2ed59-7fc7-4574-baad-74d7fe7393a9",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "openai/text-embedding-3-small"
+            },
+            {
+              "name": "=input",
+              "value": "={{$json.title + '\\n\\n' + $json.description}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "124c52c7-1e9b-43be-b025-84fe171fdd30",
+      "name": "HTTP Request (embeddings)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "C7XbAdHRTFBddFsD",
+          "name": "OpenRouter API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: true,\n      project_id: items[0].json.id,\n      title: items[0].json.title\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        0
+      ],
+      "id": "51b10db3-055b-48b9-b215-a80bd84e2532",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO projects (\n  user_id,\n  title,\n  description,\n  keywords,\n  status,\n  embedding,\n  embedding_model_version\n)\nVALUES (\n  '{{$('Set').item.json.user_id}}',\n  '{{$('Set').item.json.title.replace(/'/g, \"''\")}}',\n  '{{$('Set').item.json.description.replace(/'/g, \"''\")}}',\n  '{{$('Set').item.json.keywords_pg.replace(/'/g, \"''\")}}'::text[],\n  'active',\n  '{{ JSON.stringify($('HTTP Request (embeddings)').item.json.data[0].embedding) }}'::vector,\n  'openai/text-embedding-3-small'\n)\nRETURNING id, title;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        608,
+        0
+      ],
+      "id": "b86690a5-fd7b-487d-8811-7e6e7cd21922",
+      "name": "Insert project",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (embeddings)": {
+      "main": [
+        [
+          {
+            "node": "Insert project",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert project": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "f70600d8-da5d-4713-a672-da3401a39063",
+  "activeVersionId": "f70600d8-da5d-4713-a672-da3401a39063",
+  "versionCounter": 67,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-14T17:48:19.714Z",
+      "createdAt": "2026-04-14T17:48:19.714Z",
+      "role": "workflow:owner",
+      "workflowId": "HdQOUq7YtK3Noptx",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version f70600d8",
+    "description": ""
+  }
+}

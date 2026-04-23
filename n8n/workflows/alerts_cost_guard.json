@@ -1,0 +1,554 @@
+{
+  "updatedAt": "2026-04-22T18:33:59.964Z",
+  "createdAt": "2026-04-22T18:22:37.394Z",
+  "id": "IXVjQ0K5vX2ZxNrc",
+  "name": "alerts_cost_guard",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        160
+      ],
+      "id": "a478537a-c481-4b67-84c4-50367c820749",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ts-1h",
+              "name": "fromIso1h",
+              "value": "={{ $now.minus({ hours: 1 }).toUTC().toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "ts-24h",
+              "name": "fromIso24h",
+              "value": "={{ $now.minus({ hours: 24 }).toUTC().toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "ts-now",
+              "name": "toIso",
+              "value": "={{ $now.toUTC().toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -240,
+        160
+      ],
+      "id": "26d4ba70-f9b1-436c-9565-cdc8685eca09",
+      "name": "Timestamps"
+    },
+    {
+      "parameters": {
+        "url": "https://langfuse.ai-research-agent.com/api/public/metrics/daily",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fromTimestamp",
+              "value": "={{ $json.fromIso1h }}"
+            },
+            {
+              "name": "toTimestamp",
+              "value": "={{ $json.toIso }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3373ab52-7f9a-4ffc-85d2-ba9ec7534a4e",
+      "name": "Langfuse cost 1h",
+      "retryOnFail": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "msuHs7srJe4fcu64",
+          "name": "Langfuse API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json?.data || [];\nlet total = 0;\nfor (const bucket of data) {\n  total += Number(bucket.totalCost) || 0;\n}\nreturn [{ json: { cost_value: Number(total.toFixed(6)), threshold: 1.0 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "00e43fab-9178-49c2-86c7-6dc103ac469e",
+      "name": "Sum cost 1h"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-hourly",
+              "leftValue": "={{ $json.cost_value }}",
+              "rightValue": "={{ $json.threshold }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        0
+      ],
+      "id": "9cd64b16-625d-4326-9380-28dfbb18bb13",
+      "name": "IF hourly over threshold"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO alert_buckets (alert_key, bucket_id, cost_value, threshold_value)\nVALUES (\n  'cost_hourly',\n  to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24'),\n  {{ $json.cost_value }},\n  {{ $json.threshold }}\n)\nON CONFLICT (alert_key, bucket_id) DO NOTHING\nRETURNING bucket_id, cost_value, threshold_value;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "id": "645d11b4-4db7-45eb-a70f-8003cb698aa6",
+      "name": "Claim hourly bucket",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text-hourly",
+              "name": "text",
+              "value": "=💸 <b>Cost alert: hourly threshold exceeded</b>\n\nWindow: last 1 hour\nSpent: <b>${{ Number($json.cost_value).toFixed(4) }}</b>\nThreshold: ${{ Number($json.threshold_value).toFixed(2) }}\n\nBucket: <code>{{ $json.bucket_id }}</code> UTC\n\nhttps://langfuse.ai-research-agent.com/",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        0
+      ],
+      "id": "0992cff4-212f-48bc-b42c-64853ee7d3e6",
+      "name": "Format hourly msg"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003977251602",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "63777508-249f-4ce2-a1ab-30e4afc75d25",
+      "name": "Send hourly alert",
+      "webhookId": "f94ebb74-eacd-4ab4-a56e-dfccdc4fcc66",
+      "credentials": {
+        "telegramApi": {
+          "id": "E8swXBEqtCkrtAro",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://langfuse.ai-research-agent.com/api/public/metrics/daily",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fromTimestamp",
+              "value": "={{ $json.fromIso24h }}"
+            },
+            {
+              "name": "toTimestamp",
+              "value": "={{ $json.toIso }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        0,
+        320
+      ],
+      "id": "a20424df-29c4-42b6-bb9d-4ec51b9c04e5",
+      "name": "Langfuse cost 24h",
+      "retryOnFail": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "msuHs7srJe4fcu64",
+          "name": "Langfuse API"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json?.data || [];\nlet total = 0;\nfor (const bucket of data) {\n  total += Number(bucket.totalCost) || 0;\n}\nreturn [{ json: { cost_value: Number(total.toFixed(6)), threshold: 5.0 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        320
+      ],
+      "id": "c9f3bb40-e223-456c-81ac-34b6bdaf68d5",
+      "name": "Sum cost 24h"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cond-daily",
+              "leftValue": "={{ $json.cost_value }}",
+              "rightValue": "={{ $json.threshold }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        320
+      ],
+      "id": "a4e981b6-3a0f-4e0e-8b89-a1906887806e",
+      "name": "IF daily over threshold"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO alert_buckets (alert_key, bucket_id, cost_value, threshold_value)\nVALUES (\n  'cost_daily',\n  to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD'),\n  {{ $json.cost_value }},\n  {{ $json.threshold }}\n)\nON CONFLICT (alert_key, bucket_id) DO NOTHING\nRETURNING bucket_id, cost_value, threshold_value;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        320
+      ],
+      "id": "3af489ad-4ca3-4d92-81ce-010c5bcfd65c",
+      "name": "Claim daily bucket",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "text-daily",
+              "name": "text",
+              "value": "=💸 <b>Cost alert: daily threshold exceeded</b>\n\nWindow: last 24 hours\nSpent: <b>${{ Number($json.cost_value).toFixed(4) }}</b>\nThreshold: ${{ Number($json.threshold_value).toFixed(2) }}\n\nBucket: <code>{{ $json.bucket_id }}</code> UTC\n\nhttps://langfuse.ai-research-agent.com/",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        320
+      ],
+      "id": "a08a327b-075e-4ffd-a785-8bf543ed1e7b",
+      "name": "Format daily msg"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003977251602",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        320
+      ],
+      "id": "a614d74d-4a21-484d-b63d-b7947e1ce4b7",
+      "name": "Send daily alert",
+      "webhookId": "f273604b-d83b-43c8-be80-5786e7fa8eea",
+      "credentials": {
+        "telegramApi": {
+          "id": "E8swXBEqtCkrtAro",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Timestamps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Timestamps": {
+      "main": [
+        [
+          {
+            "node": "Langfuse cost 1h",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Langfuse cost 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Langfuse cost 1h": {
+      "main": [
+        [
+          {
+            "node": "Sum cost 1h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sum cost 1h": {
+      "main": [
+        [
+          {
+            "node": "IF hourly over threshold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF hourly over threshold": {
+      "main": [
+        [
+          {
+            "node": "Claim hourly bucket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim hourly bucket": {
+      "main": [
+        [
+          {
+            "node": "Format hourly msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format hourly msg": {
+      "main": [
+        [
+          {
+            "node": "Send hourly alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Langfuse cost 24h": {
+      "main": [
+        [
+          {
+            "node": "Sum cost 24h",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sum cost 24h": {
+      "main": [
+        [
+          {
+            "node": "IF daily over threshold",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF daily over threshold": {
+      "main": [
+        [
+          {
+            "node": "Claim daily bucket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim daily bucket": {
+      "main": [
+        [
+          {
+            "node": "Format daily msg",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format daily msg": {
+      "main": [
+        [
+          {
+            "node": "Send daily alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9qLJPkzSbPAxHeud",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": null,
+  "pinData": {},
+  "versionId": "4de2d947-a012-4689-8197-6b181d13b9fd",
+  "activeVersionId": "4de2d947-a012-4689-8197-6b181d13b9fd",
+  "versionCounter": 16,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-22T18:22:37.394Z",
+      "createdAt": "2026-04-22T18:22:37.394Z",
+      "role": "workflow:owner",
+      "workflowId": "IXVjQ0K5vX2ZxNrc",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 4de2d947",
+    "description": ""
+  }
+}

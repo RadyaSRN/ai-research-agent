@@ -1,0 +1,261 @@
+{
+  "updatedAt": "2026-04-23T12:58:13.298Z",
+  "createdAt": "2026-04-14T19:33:48.320Z",
+  "id": "cnjja7CWwyZ8UVQu",
+  "name": "add_idea",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "title"
+            },
+            {
+              "name": "description"
+            },
+            {
+              "name": "keywords"
+            },
+            {
+              "name": "user_id"
+            },
+            {
+              "name": "project_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "460ec66c-3b29-41b6-b8b6-fd96babe37e0",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1c46ca47-f445-4c46-a895-57c24d70034c",
+              "name": "=title",
+              "value": "={{$json.title}}",
+              "type": "string"
+            },
+            {
+              "id": "1f0053ee-0652-44d5-9a9e-5a839d1d2966",
+              "name": "description",
+              "value": "={{$json.description || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "7ab68775-9aa5-4aab-8df7-082f5251a289",
+              "name": "keywords",
+              "value": "={{$json.keywords || \"\"}}",
+              "type": "string"
+            },
+            {
+              "id": "b6c4d990-d3be-4257-8afe-d3d0a049fe57",
+              "name": "user_id",
+              "value": "={{$json.user_id}}",
+              "type": "string"
+            },
+            {
+              "id": "03582ce6-a250-4845-834e-cbf6f9181d5c",
+              "name": "keywords_pg",
+              "value": "={{\"{\" + (($json.keywords || \"\").split(\",\").map((s) => s.trim()).filter(Boolean).map((s) => \"\\\"\" + s.replace(/\\\\/g, \"\\\\\\\\\").replace(/\"/g, \"\\\\\\\"\") + \"\\\"\")).join(\",\") + \"}\"}}",
+              "type": "string"
+            },
+            {
+              "id": "fb833367-ff93-4d4f-a326-0a77e095c940",
+              "name": "project_id",
+              "value": "={{$json.project_id}}",
+              "type": "string"
+            },
+            {
+              "id": "b71fd0bd-9c97-49c7-82d3-1a38cfba08cf",
+              "name": "embedding_text",
+              "value": "={{$json.title + \"\\n\\n\" + ($json.description || \"\")}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "9a5c2daf-2955-41dc-ad77-a7e4e15513e6",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "openai/text-embedding-3-small"
+            },
+            {
+              "name": "=input",
+              "value": "={{$json.embedding_text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        0
+      ],
+      "id": "028b54ed-2d16-45ba-981e-1d6ca3472b6e",
+      "name": "HTTP Request (embeddings)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "C7XbAdHRTFBddFsD",
+          "name": "OpenRouter API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: true,\n      idea_id: $json.id,\n      project_id: $json.project_id,\n      title: $json.title,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        0
+      ],
+      "id": "4c41d28a-6a28-49d8-b065-fd11dc0ac0ac",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO ideas (\n  project_id,\n  user_id,\n  title,\n  description,\n  keywords,\n  status,\n  embedding,\n  embedding_model_version\n)\nVALUES (\n  '{{$('Set').item.json.project_id}}',\n  '{{$('Set').item.json.user_id}}',\n  '{{$('Set').item.json.title.replace(/'/g, \"''\")}}',\n  '{{$('Set').item.json.description.replace(/'/g, \"''\")}}',\n  '{{$('Set').item.json.keywords_pg.replace(/'/g, \"''\")}}'::text[],\n  'active',\n  '{{ JSON.stringify($('HTTP Request (embeddings)').item.json.data[0].embedding) }}'::vector,\n  'openai/text-embedding-3-small'\n)\nRETURNING id, project_id, title;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        608,
+        0
+      ],
+      "id": "1f186ca9-a19d-4f22-90fa-3c609cae4521",
+      "name": "Insert idea",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (embeddings)": {
+      "main": [
+        [
+          {
+            "node": "Insert idea",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert idea": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "b98130c8-c57e-42f6-b6fd-60399726e701",
+  "activeVersionId": "b98130c8-c57e-42f6-b6fd-60399726e701",
+  "versionCounter": 22,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-14T19:33:48.320Z",
+      "createdAt": "2026-04-14T19:33:48.320Z",
+      "role": "workflow:owner",
+      "workflowId": "cnjja7CWwyZ8UVQu",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version b98130c8",
+    "description": ""
+  }
+}

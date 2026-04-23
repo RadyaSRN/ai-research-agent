@@ -1,0 +1,133 @@
+{
+  "updatedAt": "2026-04-23T11:24:26.955Z",
+  "createdAt": "2026-04-23T08:14:36.914Z",
+  "id": "AYdRbBLVd30HSwap",
+  "name": "bench_relevance_wrapper",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bench-relevance",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "c1111111-1111-1111-1111-111111111111",
+      "name": "Webhook",
+      "webhookId": "6075c41c-525e-4257-8080-3f68016142d6"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body ?? $input.first().json;\nreturn [{ json: { idea_id: body.idea_id, paper_id: body.paper_id, model: body.model || 'openai/gpt-5.4-nano', langfuse_trace_id: body.trace_id || null } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "c2222222-2222-2222-2222-222222222222",
+      "name": "Prepare"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zVnChoDhQmH6we3m",
+          "mode": "list",
+          "cachedResultName": "relevance_score"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "idea_id": "={{ $json.idea_id }}",
+            "paper_id": "={{ $json.paper_id }}",
+            "model": "={{ $json.model }}",
+            "langfuse_trace_id": "={{ $json.langfuse_trace_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "c3333333-3333-3333-3333-333333333333",
+      "name": "Call relevance_score"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare": {
+      "main": [
+        [
+          {
+            "node": "Call relevance_score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "1911320f-2e1f-4ae7-a06c-988fee4dfcc9",
+  "activeVersionId": "1911320f-2e1f-4ae7-a06c-988fee4dfcc9",
+  "versionCounter": 10,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-23T08:14:36.914Z",
+      "createdAt": "2026-04-23T08:14:36.914Z",
+      "role": "workflow:owner",
+      "workflowId": "AYdRbBLVd30HSwap",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

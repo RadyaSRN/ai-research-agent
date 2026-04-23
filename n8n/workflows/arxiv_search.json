@@ -1,0 +1,476 @@
+{
+  "updatedAt": "2026-04-22T07:57:07.239Z",
+  "createdAt": "2026-04-15T20:59:10.547Z",
+  "id": "hUojeucml5ZbAHqe",
+  "name": "arxiv_search",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_id"
+            },
+            {
+              "name": "query"
+            },
+            {
+              "name": "sort_by"
+            },
+            {
+              "name": "max_results"
+            },
+            {
+              "name": "arxiv_id"
+            },
+            {
+              "name": "sort_order"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a2c18478-2cd6-48ec-8565-cbb439a02cce",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ba0d23bc-0d5f-435a-b94c-480a46e1c66c",
+              "name": "user_id",
+              "value": "={{ $json.user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8cb52c33-b5de-42a7-a3f2-3d52fc134f75",
+              "name": "query",
+              "value": "={{ ($json.query || '').replace(/\"/g, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "05b581d9-4ce8-4581-b025-cac0f69f8244",
+              "name": "sort_by",
+              "value": "={{ $json.sort_by || \"relevance\" }}",
+              "type": "string"
+            },
+            {
+              "id": "b299dbf1-96e0-42e2-90cc-6829486f44ff",
+              "name": "max_results",
+              "value": "={{ $json.max_results || \"10\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5a48809e-c334-49ca-ab76-0f48708c33dd",
+              "name": "arxiv_id",
+              "value": "={{ ($json.arxiv_id || \"\").replace(/v\\d+$/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "ded43703-3d8f-466c-a2eb-d11247c30028",
+              "name": "mode",
+              "value": "={{ $json.arxiv_id ? \"id_list\" : \"search\" }}",
+              "type": "string"
+            },
+            {
+              "id": "713f26d4-845d-4a80-8753-be08b969c889",
+              "name": "sort_order",
+              "value": "={{ $json.sort_order || \"descending\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d111f2c4-24e2-4d39-ad42-ab6ee8a7412d",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "url": "http://export.arxiv.org/api/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search_query",
+              "value": "={{ $json.mode === \"search\" ? $json.query : \"\" }}"
+            },
+            {
+              "name": "sortBy",
+              "value": "={{ $json.sort_by }}"
+            },
+            {
+              "name": "sortOrder",
+              "value": "={{ $json.sort_order }}"
+            },
+            {
+              "name": "max_results",
+              "value": "={{ $json.mode === \"search\" ? $json.max_results : \"1\" }}"
+            },
+            {
+              "name": "start",
+              "value": "0"
+            },
+            {
+              "name": "id_list",
+              "value": "={{ $json.mode === \"id_list\" ? $json.arxiv_id : \"\" }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "86c0f866-5de8-4c75-b2e0-807173e4de94",
+      "name": "HTTP Request (arxiv)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const xml = $input.first().json.data;\n\nif (!xml || typeof xml !== \"string\") {\n  throw new Error(\"Не найден XML-текст в ответе HTTP Request\");\n}\n\nfunction getAllMatches(text, regex) {\n  return [...text.matchAll(regex)].map((match) => match[1]?.trim()).filter(Boolean);\n}\n\nfunction getFirstMatch(text, regex) {\n  return text.match(regex)?.[1]?.trim() ?? null;\n}\n\nfunction cleanupText(text) {\n  return text.replace(/\\s+/g, \" \").trim();\n}\n\nconst entries = [...xml.matchAll(/<entry>([\\s\\S]*?)<\\/entry>/g)].map((match) => match[1]);\n\nconst items = entries.map((entry) => {\n  const rawId = getFirstMatch(entry, /<id>(.*?)<\\/id>/);\n  const arxivId = rawId ? rawId.split(\"/abs/\").pop() : null;\n\n  const title = cleanupText(getFirstMatch(entry, /<title>([\\s\\S]*?)<\\/title>/) ?? \"\");\n  const abstract = cleanupText(getFirstMatch(entry, /<summary>([\\s\\S]*?)<\\/summary>/) ?? \"\");\n\n  const authors = getAllMatches(entry, /<name>([\\s\\S]*?)<\\/name>/g).map(cleanupText);\n  const categories = getAllMatches(entry, /<category[^>]*term=\"([^\"]+)\"[^>]*\\/?>/g);\n\n  const publishedAt = getFirstMatch(entry, /<published>(.*?)<\\/published>/);\n  const updatedAtArxiv = getFirstMatch(entry, /<updated>(.*?)<\\/updated>/);\n\n  const url = getFirstMatch(entry, /<id>(.*?)<\\/id>/);\n  const pdfUrl =\n    getFirstMatch(entry, /<link[^>]*title=\"pdf\"[^>]*href=\"([^\"]+)\"[^>]*\\/?>/) ??\n    (url ? url.replace(\"/abs/\", \"/pdf/\") + \".pdf\" : null);\n\n  return {\n    json: {\n      arxiv_id: arxivId,\n      title,\n      abstract,\n      authors,\n      categories,\n      authors_sql: `{${authors.map((value) => `\"${value.replace(/\"/g, '\\\\\"')}\"`).join(\",\")}}`,\n      categories_sql: `{${categories.map((value) => `\"${value.replace(/\"/g, '\\\\\"')}\"`).join(\",\")}}`,\n      published_at: publishedAt,\n      updated_at_arxiv: updatedAtArxiv,\n      url,\n      pdf_url: pdfUrl,\n      ingested_via: \"ondemand_search\",\n    },\n  };\n}).filter((item) => {\n  return !!(item.json.arxiv_id && item.json.title && item.json.abstract);\n});\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "59dd3a31-f571-46f4-b66d-abc309490814",
+      "name": "Parse XML"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO papers (arxiv_id, title, abstract, authors, categories, published_at, updated_at_arxiv, url, pdf_url, ingested_via)\nVALUES (\n  '{{ $json.arxiv_id }}',\n  $${{ $json.title }}$$,\n  $${{ $json.abstract }}$$,\n  '{{ $json.authors_sql }}'::text[],\n  '{{ $json.categories_sql }}'::text[],\n  '{{ $json.published_at }}'::timestamptz,\n  '{{ $json.updated_at_arxiv }}'::timestamptz,\n  '{{ $json.url }}',\n  '{{ $json.pdf_url }}',\n  'ondemand_search'\n)\nON CONFLICT (arxiv_id) DO NOTHING\nRETURNING id, arxiv_id;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        0
+      ],
+      "id": "78c78a70-7145-4d32-a557-1226a300aab6",
+      "name": "Insert papers",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "261e972f-f20c-45d6-9058-f0407a28c4e0",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "84fc59dd-5f91-4de0-91e2-1560632d954c",
+      "name": "IF: Has new papers?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "openai/text-embedding-3-small"
+            },
+            {
+              "name": "=input",
+              "value": "={{$json.embedding_text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        -96
+      ],
+      "id": "bb16b901-f823-436d-900f-d0a39384c58e",
+      "name": "HTTP Request (embeddings)",
+      "credentials": {
+        "openRouterApi": {
+          "id": "I7YyDpuOKK1e3okL",
+          "name": "OpenRouter account"
+        },
+        "httpHeaderAuth": {
+          "id": "C7XbAdHRTFBddFsD",
+          "name": "OpenRouter API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO paper_embeddings (paper_id, embedding, embedding_model_version)\nVALUES (\n  '{{ $('Set (text для embedding)').item.json.id }}'::UUID,\n  '{{ JSON.stringify($json.data[0].embedding) }}'::vector,\n  'openai/text-embedding-3-small'\n)\nON CONFLICT (paper_id) DO NOTHING;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1808,
+        -80
+      ],
+      "id": "c89d3d96-8b7b-4aba-823d-3d6aafd90310",
+      "name": "Postgres (paper_embeddings)",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "16572d61-1d05-4c4c-8d47-791be323e4ab",
+              "name": "id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "5f16cd39-51c0-4a3b-b210-e5e44df7dadd",
+              "name": "arxiv_id",
+              "value": "={{ $json.arxiv_id }}",
+              "type": "string"
+            },
+            {
+              "id": "463c6f94-5757-461b-b8e5-569bad3bd567",
+              "name": "embedding_text",
+              "value": "={{ $('Parse XML').item.json.title }}. {{ $('Parse XML').item.json.abstract }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1328,
+        -48
+      ],
+      "id": "791c01a5-4bbc-40b9-85d7-de1a32169732",
+      "name": "Set (text для embedding)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const allPapers = $(\"Parse XML\").all().map(i => i.json);\n\nreturn [{\n  json: {\n    success: true,\n    count: allPapers.length,\n    papers: allPapers.map(p => ({\n      arxiv_id: p.arxiv_id,\n      title: p.title,\n      authors: p.authors,\n      abstract: p.abstract,\n      url: p.url,\n      published_at: p.published_at,\n      categories: p.categories,\n    })),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        400
+      ],
+      "id": "97909771-04a6-457e-b133-dcd0df7db97a",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (arxiv)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (arxiv)": {
+      "main": [
+        [
+          {
+            "node": "Parse XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse XML": {
+      "main": [
+        [
+          {
+            "node": "Insert papers",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert papers": {
+      "main": [
+        [
+          {
+            "node": "IF: Has new papers?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (embeddings)": {
+      "main": [
+        [
+          {
+            "node": "Postgres (paper_embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: Has new papers?": {
+      "main": [
+        [
+          {
+            "node": "Set (text для embedding)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set (text для embedding)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres (paper_embeddings)": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "ac1d729d-8cae-4beb-b54c-67e18a08df8f",
+  "activeVersionId": "ac1d729d-8cae-4beb-b54c-67e18a08df8f",
+  "versionCounter": 130,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T20:59:10.547Z",
+      "createdAt": "2026-04-15T20:59:10.547Z",
+      "role": "workflow:owner",
+      "workflowId": "hUojeucml5ZbAHqe",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version ac1d729d",
+    "description": ""
+  }
+}

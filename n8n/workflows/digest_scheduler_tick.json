@@ -1,0 +1,241 @@
+{
+  "updatedAt": "2026-04-22T17:53:40.267Z",
+  "createdAt": "2026-04-15T17:40:18.188Z",
+  "id": "i01ZdGKmmKDy16ra",
+  "name": "digest_scheduler_tick",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "02dbfd81-1f71-43f8-9d73-42da8796d951",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  ds.user_id,\n  ds.send_time::TEXT,\n  ds.timezone\nFROM digest_schedules ds\nWHERE ds.is_enabled = TRUE\n  AND ds.next_run_at <= now();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "0a65fca1-c9c1-46ad-8924-398889d3abbb",
+      "name": "Get due schedules",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e49be809-6faf-4cd3-b5eb-17d101e2c36e",
+              "leftValue": "={{ $json.user_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "cb97f405-3e31-48fa-9e50-4e18ae03a80f",
+      "name": "IF: \"Has users?\""
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE digest_schedules\nSET next_run_at = (\n  (now() AT TIME ZONE timezone)::DATE\n  + INTERVAL '1 day'\n  + send_time\n) AT TIME ZONE timezone,\n    last_run_at = now()\nWHERE user_id = '{{ $(\"Get due schedules\").item.json.user_id }}'\n  AND is_enabled = TRUE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "9b8b301a-332d-4fcc-8801-890af018c132",
+      "name": "Update next_run_at",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "J73g67dlY8p6KdPD",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/J73g67dlY8p6KdPD",
+          "cachedResultName": "daily_digest_for_user"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.user_id }}"
+          },
+          "matchingColumns": [
+            "user_id"
+          ],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        -96
+      ],
+      "id": "ba4c8f59-8953-4b7a-8f0e-a137d1281b67",
+      "name": "Call 'daily_digest_for_user'"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get due schedules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get due schedules": {
+      "main": [
+        [
+          {
+            "node": "IF: \"Has users?\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: \"Has users?\"": {
+      "main": [
+        [
+          {
+            "node": "Call 'daily_digest_for_user'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'daily_digest_for_user'": {
+      "main": [
+        [
+          {
+            "node": "Update next_run_at",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9qLJPkzSbPAxHeud",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "cd0ffdd1-9664-4c32-bdc6-19d01ced7862",
+  "activeVersionId": "cd0ffdd1-9664-4c32-bdc6-19d01ced7862",
+  "versionCounter": 49,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T17:40:18.188Z",
+      "createdAt": "2026-04-15T17:40:18.188Z",
+      "role": "workflow:owner",
+      "workflowId": "i01ZdGKmmKDy16ra",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version cd0ffdd1",
+    "description": ""
+  }
+}

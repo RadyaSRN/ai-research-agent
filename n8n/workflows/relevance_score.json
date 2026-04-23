@@ -1,0 +1,321 @@
+{
+  "updatedAt": "2026-04-23T11:24:26.955Z",
+  "createdAt": "2026-04-15T12:26:44.346Z",
+  "id": "zVnChoDhQmH6we3m",
+  "name": "relevance_score",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "idea_id"
+            },
+            {
+              "name": "paper_id"
+            },
+            {
+              "name": "model"
+            },
+            {
+              "name": "langfuse_trace_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e1bdb2f5-75a7-4445-a677-5704157a99e1",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5a742da0-4777-4768-a2fd-fc88f25bfd46",
+              "name": "idea_id",
+              "value": "={{$json.idea_id}}",
+              "type": "string"
+            },
+            {
+              "id": "517537b6-9778-4986-b71b-636eaed7a402",
+              "name": "paper_id",
+              "value": "={{$json.paper_id}}",
+              "type": "string"
+            },
+            {
+              "id": "bench-model",
+              "name": "model",
+              "value": "={{ $json.model || 'openai/gpt-5.4-nano' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "28194901-8dfc-4aa1-a9b8-e5b58e4caf51",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  i.id as idea_id,\n  i.title as idea_title,\n  i.description as idea_description,\n  i.keywords as idea_keywords,\n  p.id as paper_id,\n  p.title as paper_title,\n  p.abstract as paper_abstract\nFROM ideas i\nJOIN papers p ON p.arxiv_id = '{{$('Set').item.json.paper_id}}'\nWHERE i.id = '{{$('Set').item.json.idea_id}}'\nLIMIT 1;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "fe0d3310-ca06-484a-afe7-63bc82cb0f52",
+      "name": "Get idea and paper data",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1376,
+        0
+      ],
+      "id": "259c677d-428d-496a-b325-92f425990c1e",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "={{ $('Set').item.json.model }}",
+        "options": {
+          "responseFormat": "json_object"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        176
+      ],
+      "id": "a5eb0db2-4089-4bcf-aaf7-777f3d17011f",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "I7YyDpuOKK1e3okL",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"relevance_score\": 7,\n  \"reasoning\": \"The paper is relevant because it uses similar methodology and addresses a closely related problem.\",\n  \"key_concepts_matched\": [\"diffusion guidance\", \"hidden activations\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1552,
+        192
+      ],
+      "id": "f2594f4b-92d0-4883-9304-88fe96064df1",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "if (!items.length) {\n  return [{ json: { success: false, error: \"idea or paper not found\" } }];\n}\n\nconst sources = $(\"Get idea and paper data\").all().map(s => s.json);\n\nreturn items.map((it, idx) => {\n  const llm = it.json.output;\n  const source = sources[idx];\n  return {\n    json: {\n      success: true,\n      idea_id: source.idea_id,\n      paper_id: source.paper_id,\n      idea_title: source.idea_title,\n      idea_description: source.idea_description,\n      paper_title: source.paper_title,\n      paper_abstract: source.paper_abstract,\n      relevance_score: llm.relevance_score,\n      reasoning: llm.reasoning,\n      key_concepts_matched: llm.key_concepts_matched,\n    },\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        0
+      ],
+      "id": "ce88d494-4144-4cdd-b83c-1c1d12791078",
+      "name": "Return"
+    },
+    {
+      "parameters": {
+        "promptName": "relevance_score",
+        "requestOptions": {}
+      },
+      "type": "@langfuse/n8n-nodes-langfuse.langfuse",
+      "typeVersion": 1,
+      "position": [
+        752,
+        0
+      ],
+      "id": "07dd515f-7f12-452d-91f8-566d4460e702",
+      "name": "Get system prompt from Langfuse",
+      "credentials": {
+        "langfuseApi": {
+          "id": "gqKtUnj5w09uIlCr",
+          "name": "Langfuse account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const templates = $input.all();\nconst sources = $('Get idea and paper data').all();\n\nreturn templates.map((t, idx) => {\n  const template = t.json.prompt;\n  const src = sources[idx].json;\n  const vars = {\n    idea_title: src.idea_title,\n    idea_description: src.idea_description,\n    idea_keywords: Array.isArray(src.idea_keywords)\n      ? src.idea_keywords.join(', ')\n      : (src.idea_keywords ?? ''),\n    paper_title: src.paper_title,\n    paper_abstract: src.paper_abstract,\n  };\n  let compiled = template;\n  for (const [k, v] of Object.entries(vars)) {\n    compiled = compiled.replace(new RegExp(`{{\\\\s*${k}\\\\s*}}`, 'g'), String(v ?? ''));\n  }\n  return { json: { ...src, prompt: compiled } };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        0
+      ],
+      "id": "755dc70f-d63e-4a2a-be16-da649129be5b",
+      "name": "Compile prompt"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Get idea and paper data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get idea and paper data": {
+      "main": [
+        [
+          {
+            "node": "Get system prompt from Langfuse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Return",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get system prompt from Langfuse": {
+      "main": [
+        [
+          {
+            "node": "Compile prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compile prompt": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "b0e5c695-42b9-476e-802d-d294c820ffb6",
+  "activeVersionId": "b0e5c695-42b9-476e-802d-d294c820ffb6",
+  "versionCounter": 96,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T12:26:44.346Z",
+      "createdAt": "2026-04-15T12:26:44.346Z",
+      "role": "workflow:owner",
+      "workflowId": "zVnChoDhQmH6we3m",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "updatedAt": "2026-04-21T10:11:42.103Z",
+  "createdAt": "2026-04-14T19:56:08.482Z",
+  "id": "N0Q0IlqQ48ktXquB",
+  "name": "list_projects",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e96d3290-aeec-432a-8f17-a20a3b52c12d",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  id,\n  title,\n  description,\n  keywords,\n  status,\n  created_at,\n  updated_at\nFROM projects\nWHERE user_id = '{{$('Set').item.json.user_id}}'\nORDER BY\n  CASE status\n    WHEN 'active' THEN 0\n    WHEN 'paused' THEN 1\n    WHEN 'archived' THEN 2\n    ELSE 3\n  END,\n  updated_at DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "12f0fec1-d15c-4a17-9484-7a7b478d8286",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "928c8807-a9c6-4552-85be-bce18de50fb6",
+              "name": "user_id",
+              "value": "={{$json.user_id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "bb16e680-09f0-4500-a0ff-4fa2e000620a",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: true,\n      projects: items.map((item) => ({\n        id: item.json.id,\n        title: item.json.title,\n        description: item.json.description,\n        keywords: item.json.keywords,\n        status: item.json.status,\n        created_at: item.json.created_at,\n        updated_at: item.json.updated_at,\n      })),\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "fcdbdde5-89ff-414f-9da2-e723b4aaf7cb",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "3cd839d8-a5ed-4697-a228-4612a80521c6",
+  "activeVersionId": "3cd839d8-a5ed-4697-a228-4612a80521c6",
+  "versionCounter": 22,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-14T19:56:08.482Z",
+      "createdAt": "2026-04-14T19:56:08.482Z",
+      "role": "workflow:owner",
+      "workflowId": "N0Q0IlqQ48ktXquB",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 3cd839d8",
+    "description": ""
+  }
+}

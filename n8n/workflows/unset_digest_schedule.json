@@ -1,0 +1,159 @@
+{
+  "updatedAt": "2026-04-21T10:11:52.962Z",
+  "createdAt": "2026-04-15T16:26:07.328Z",
+  "id": "0uX9rtiHFqJPUqAO",
+  "name": "unset_digest_schedule",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4531030b-317d-4890-9c61-9e55562340a0",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "367a06a7-5a4c-478d-bcf9-6727608ef321",
+              "name": "user_id",
+              "value": "={{ $json.user_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d5454e51-6ff8-426a-9891-8ec988c3cce4",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE digest_schedules\nSET is_enabled = FALSE,\n    next_run_at = NULL\nWHERE user_id = '{{ $('Set').item.json.user_id }}'\nRETURNING send_time::TEXT, timezone;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "230df754-b78f-40ad-bc75-fe2fe3be95a9",
+      "name": "Unset schedule",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "if (items.length === 0 || !items[0].json.send_time) {\n  return [{\n    json: {\n      success: true,\n      was_active: false,\n      message: \"No digest schedule found for this user. Nothing to disable.\"\n    }\n  }];\n}\n\nconst s = items[0].json;\nreturn [{\n  json: {\n    success: true,\n    was_active: true,\n    message: `Digest schedule disabled (was: daily at ${s.send_time} ${s.timezone}).`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "0a129946-9f6c-40ab-961d-c4c0a83993d7",
+      "name": "Return result"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Unset schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unset schedule": {
+      "main": [
+        [
+          {
+            "node": "Return result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "34b7b66e-5446-47bd-ab73-acccb28ea0d7",
+  "activeVersionId": "34b7b66e-5446-47bd-ab73-acccb28ea0d7",
+  "versionCounter": 22,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T16:26:07.328Z",
+      "createdAt": "2026-04-15T16:26:07.328Z",
+      "role": "workflow:owner",
+      "workflowId": "0uX9rtiHFqJPUqAO",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 34b7b66e",
+    "description": ""
+  }
+}

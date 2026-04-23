@@ -1,0 +1,555 @@
+{
+  "updatedAt": "2026-04-23T06:10:31.307Z",
+  "createdAt": "2026-04-14T15:10:21.245Z",
+  "id": "VIcbO7JzkRm5du2P",
+  "name": "arxiv_ingestion",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://export.arxiv.org/api/query",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "search_query",
+              "value": "cat:cs.LG OR cat:cs.CL OR cat:cs.CV OR cat:cs.AI"
+            },
+            {
+              "name": "sortBy",
+              "value": "submittedDate"
+            },
+            {
+              "name": "sortOrder",
+              "value": "descending"
+            },
+            {
+              "name": "max_results",
+              "value": "1000"
+            },
+            {
+              "name": "start",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "ResearchAgentBot/1.0 (mailto:claxywan@gmail.com)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "800e77ff-16b3-4df4-b28d-a7a52dd80650",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9,
+              "triggerAtMinute": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -80,
+        -16
+      ],
+      "id": "8c70d25a-cd55-4d65-8070-fe57eb5a63cc",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "papers",
+          "mode": "list",
+          "cachedResultName": "papers"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "arxiv_id": "={{ $json.arxiv_id }}",
+            "title": "={{ $json.title }}",
+            "abstract": "={{ $json.abstract }}",
+            "authors": "={{ $json.authors }}",
+            "categories": "={{ $json.categories }}",
+            "published_at": "={{ $json.published_at }}",
+            "updated_at_arxiv": "={{ $json.updated_at_arxiv }}",
+            "url": "={{ $json.url }}",
+            "pdf_url": "={{ $json.pdf_url }}",
+            "ingested_via": "={{ $json.ingested_via }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "arxiv_id",
+              "displayName": "arxiv_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "abstract",
+              "displayName": "abstract",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "authors",
+              "displayName": "authors",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "categories",
+              "displayName": "categories",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "array",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "published_at",
+              "displayName": "published_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "updated_at_arxiv",
+              "displayName": "updated_at_arxiv",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "pdf_url",
+              "displayName": "pdf_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ingested_via",
+              "displayName": "ingested_via",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "skipOnConflict": true
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1024,
+        96
+      ],
+      "id": "ce968e89-37b1-4a4f-b9a7-73813a3ec7eb",
+      "name": "Postgres (papers)",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7e74a384-0acc-446c-aaf8-dbefa8dfb10c",
+              "name": "embedding_text",
+              "value": "={{$('Parse XML').item.json.title + \"\\n\\n\" + $('Parse XML').item.json.abstract}}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1488,
+        80
+      ],
+      "id": "5e72085d-9af9-4a25-ba13-44f4e08e0f57",
+      "name": "Set (text для embedding)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "683785bf-9e0f-4dc9-99da-74346f0e3891",
+              "leftValue": "={{$json.id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1232,
+        96
+      ],
+      "id": "607ef9e9-9829-4249-8e0b-dbee57446ca0",
+      "name": "IF (вставилась ли новая строка)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/embeddings",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "openai/text-embedding-3-small"
+            },
+            {
+              "name": "=input",
+              "value": "={{$json.embedding_text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1744,
+        144
+      ],
+      "id": "24f1ed92-74ed-41ce-8b4c-c2b70378fc4f",
+      "name": "HTTP Request (embeddings)",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "C7XbAdHRTFBddFsD",
+          "name": "OpenRouter API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const xml = $input.first().json.body ?? $input.first().json.data ?? $input.first().binary?.data;\n\nif (!xml || typeof xml !== \"string\") {\n  throw new Error(\"Не найден XML-текст в ответе HTTP Request\");\n}\n\nfunction getAllMatches(text, regex) {\n  return [...text.matchAll(regex)].map((match) => match[1]?.trim()).filter(Boolean);\n}\n\nfunction getFirstMatch(text, regex) {\n  return text.match(regex)?.[1]?.trim() ?? null;\n}\n\nfunction cleanupText(text) {\n  return text.replace(/\\s+/g, \" \").trim();\n}\n\nconst entries = [...xml.matchAll(/<entry>([\\s\\S]*?)<\\/entry>/g)].map((match) => match[1]);\n\nconst items = entries.map((entry) => {\n  const rawId = getFirstMatch(entry, /<id>(.*?)<\\/id>/);\n  const arxivId = rawId ? rawId.split(\"/abs/\").pop() : null;\n\n  const title = cleanupText(getFirstMatch(entry, /<title>([\\s\\S]*?)<\\/title>/) ?? \"\");\n  const abstract = cleanupText(getFirstMatch(entry, /<summary>([\\s\\S]*?)<\\/summary>/) ?? \"\");\n\n  const authors = getAllMatches(entry, /<name>([\\s\\S]*?)<\\/name>/g).map(cleanupText);\n  const categories = getAllMatches(entry, /<category[^>]*term=\"([^\"]+)\"[^>]*\\/?>/g);\n\n  const publishedAt = getFirstMatch(entry, /<published>(.*?)<\\/published>/);\n  const updatedAtArxiv = getFirstMatch(entry, /<updated>(.*?)<\\/updated>/);\n\n  const url = getFirstMatch(entry, /<id>(.*?)<\\/id>/);\n  const pdfUrl =\n    getFirstMatch(entry, /<link[^>]*title=\"pdf\"[^>]*href=\"([^\"]+)\"[^>]*\\/?>/) ??\n    (url ? url.replace(\"/abs/\", \"/pdf/\") + \".pdf\" : null);\n\n  return {\n    json: {\n      arxiv_id: arxivId,\n      title,\n      abstract,\n      authors,\n      categories,\n      authors_sql: `{${authors.map((value) => `\"${value.replace(/\"/g, '\\\\\"')}\"`).join(\",\")}}`,\n      categories_sql: `{${categories.map((value) => `\"${value.replace(/\"/g, '\\\\\"')}\"`).join(\",\")}}`,\n      published_at: publishedAt,\n      updated_at_arxiv: updatedAtArxiv,\n      url,\n      pdf_url: pdfUrl,\n      ingested_via: \"scheduled\",\n    },\n  };\n}).filter((item) => {\n  return item.json.arxiv_id && item.json.title && item.json.abstract;\n});\n\nreturn items;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        80
+      ],
+      "id": "955e371f-be9f-4f60-811c-79b98d3b3c50",
+      "name": "Parse XML"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO paper_embeddings (\n  paper_id,\n  embedding,\n  embedding_model_version\n)\nVALUES (\n  '{{$('Set (text для embedding)').item.json.id}}',\n  '{{ JSON.stringify($json.data[0].embedding) }}'::vector,\n  'openai/text-embedding-3-small'\n)\nON CONFLICT (paper_id) DO NOTHING;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2240,
+        144
+      ],
+      "id": "7adb76cf-f34e-4665-9d1f-abc0c2736517",
+      "name": "Postgres (paper_embeddings)",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "028863fb-b0a7-47d8-9505-f72f3433dcb5",
+              "leftValue": "={{ $json.object }}",
+              "rightValue": "list",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1984,
+        176
+      ],
+      "id": "9d8c271a-00a7-4a71-937c-ca808ef98925",
+      "name": "IF got embedding"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Parse XML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres (papers)": {
+      "main": [
+        [
+          {
+            "node": "IF (вставилась ли новая строка)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF (вставилась ли новая строка)": {
+      "main": [
+        [
+          {
+            "node": "Set (text для embedding)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set (text для embedding)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request (embeddings)": {
+      "main": [
+        [
+          {
+            "node": "IF got embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse XML": {
+      "main": [
+        [
+          {
+            "node": "Postgres (papers)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF got embedding": {
+      "main": [
+        [
+          {
+            "node": "Postgres (paper_embeddings)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9qLJPkzSbPAxHeud",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": {
+    "node:Schedule Trigger": {
+      "recurrenceRules": []
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "04fc87a6-293c-48e1-915a-b919aad3a85b",
+  "activeVersionId": "04fc87a6-293c-48e1-915a-b919aad3a85b",
+  "versionCounter": 231,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-14T15:10:21.245Z",
+      "createdAt": "2026-04-14T15:10:21.245Z",
+      "role": "workflow:owner",
+      "workflowId": "VIcbO7JzkRm5du2P",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 04fc87a6",
+    "description": ""
+  }
+}

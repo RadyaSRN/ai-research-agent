@@ -1,0 +1,132 @@
+{
+  "updatedAt": "2026-04-22T17:42:06.158Z",
+  "createdAt": "2026-04-22T17:34:30.242Z",
+  "id": "9qLJPkzSbPAxHeud",
+  "name": "alerts_error_handler",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "3206233c-bece-43b6-b925-3462162c133b",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0ef3106a-16a0-482d-a8b4-c3f2374e1087",
+              "name": "text",
+              "value": "=🚨 Workflow failed\n\nWorkflow: <b>{{ $json.workflow.name }}</b>\nNode: {{ $json.execution.error.node.name }}\nMode: {{ $json.execution.mode }}\nTime: {{ $now.toISO() }}\n\nError:\n<code>{{ $json.execution.error.message }}</code>\n\nExecution: {{ $json.execution.url }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ecd03ab5-285b-4c21-a0e0-07ee4968b750",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "chatId": "-1003977251602",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "4f26df80-bd7c-4f44-9a7d-e802e90d2b00",
+      "name": "Send alert about failed workflow",
+      "webhookId": "eb788e3a-8611-4bc3-b4c5-59dbfc3ced13",
+      "credentials": {
+        "telegramApi": {
+          "id": "E8swXBEqtCkrtAro",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Send alert about failed workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "0967516d-06f9-4887-8c75-3fb27bb19ae6",
+  "activeVersionId": "0967516d-06f9-4887-8c75-3fb27bb19ae6",
+  "versionCounter": 26,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-22T17:34:30.242Z",
+      "createdAt": "2026-04-22T17:34:30.242Z",
+      "role": "workflow:owner",
+      "workflowId": "9qLJPkzSbPAxHeud",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 0967516d",
+    "description": ""
+  }
+}

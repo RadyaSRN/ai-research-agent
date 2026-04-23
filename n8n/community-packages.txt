@@ -1,0 +1,7 @@
+# n8n community packages, от которых зависит стек.
+# Устанавливаются вручную через UI: Settings → Community Nodes → Install.
+# Формат строк: npm-имя пакета, по одному на строку; комментарии — '#'.
+
+# Langfuse: нода "Get system prompt from Langfuse" (используется в
+# relevance_score и telegram_agent). Также даёт credential-тип langfuseApi.
+@langfuse/n8n-nodes-langfuse

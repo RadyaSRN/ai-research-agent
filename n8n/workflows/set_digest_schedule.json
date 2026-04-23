@@ -1,0 +1,177 @@
+{
+  "updatedAt": "2026-04-21T10:14:42.239Z",
+  "createdAt": "2026-04-15T16:21:14.649Z",
+  "id": "KdOcP0kYiqxWJZZs",
+  "name": "set_digest_schedule",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_id"
+            },
+            {
+              "name": "send_time"
+            },
+            {
+              "name": "timezone"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9e20c00f-ce1c-4839-8615-f6ffffe8f951",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1a87ef33-16c0-45d5-94b0-5f33c7f97f38",
+              "name": "user_id",
+              "value": "={{ $json.user_id }}",
+              "type": "string"
+            },
+            {
+              "id": "b7d6ad7c-7e14-4983-a55a-ca5878ef80e4",
+              "name": "send_time",
+              "value": "={{ $json.send_time }}",
+              "type": "string"
+            },
+            {
+              "id": "b19eeafe-aae5-4c7e-abce-4ab08b569889",
+              "name": "timezone",
+              "value": "={{ $json.timezone || \"Europe/Moscow\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "cb29a462-ac24-4da3-8ee5-1da3cc00632f",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = items[0].json;\nreturn [{\n  json: {\n    success: true,\n    schedule: {\n      send_time: s.send_time,\n      timezone: s.timezone,\n      next_run_at: s.next_run_at,\n    },\n    message: `Digest schedule set: daily at ${s.send_time} (${s.timezone}). Next digest at ${s.next_run_at}.`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "36bc2871-dda1-4271-b2c0-c87d5cc7b6f2",
+      "name": "Return result"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO digest_schedules (user_id, send_time, timezone, is_enabled, next_run_at)\nVALUES (\n  '{{ $('Set').item.json.user_id }}'::UUID,\n  '{{ $('Set').item.json.send_time }}'::TIME,\n  '{{ $('Set').item.json.timezone }}',\n  TRUE,\n  CASE\n    WHEN (now() AT TIME ZONE '{{ $('Set').item.json.timezone }}')::TIME\n         > '{{ $('Set').item.json.send_time }}'::TIME\n    THEN (\n      (now() AT TIME ZONE '{{ $('Set').item.json.timezone }}')::DATE\n      + INTERVAL '1 day'\n      + '{{ $('Set').item.json.send_time }}'::TIME\n    ) AT TIME ZONE '{{ $('Set').item.json.timezone }}'\n    ELSE (\n      (now() AT TIME ZONE '{{ $('Set').item.json.timezone }}')::DATE\n      + '{{ $('Set').item.json.send_time }}'::TIME\n    ) AT TIME ZONE '{{ $('Set').item.json.timezone }}'\n  END\n)\nON CONFLICT (user_id) DO UPDATE SET\n  send_time   = EXCLUDED.send_time,\n  timezone    = EXCLUDED.timezone,\n  is_enabled  = TRUE,\n  next_run_at = EXCLUDED.next_run_at\nRETURNING\n  send_time::TEXT,\n  timezone,\n  next_run_at;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "82eb6b19-5a7c-48ab-a0b6-aedb49f8733b",
+      "name": "Set schedule",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Set schedule",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set schedule": {
+      "main": [
+        [
+          {
+            "node": "Return result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "30f44cfe-bf65-41e7-a188-1ef5864db48d",
+  "activeVersionId": "30f44cfe-bf65-41e7-a188-1ef5864db48d",
+  "versionCounter": 25,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T16:21:14.649Z",
+      "createdAt": "2026-04-15T16:21:14.649Z",
+      "role": "workflow:owner",
+      "workflowId": "KdOcP0kYiqxWJZZs",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 30f44cfe",
+    "description": ""
+  }
+}

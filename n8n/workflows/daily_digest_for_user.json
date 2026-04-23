@@ -1,0 +1,491 @@
+{
+  "updatedAt": "2026-04-23T05:06:12.598Z",
+  "createdAt": "2026-04-15T16:44:22.817Z",
+  "id": "J73g67dlY8p6KdPD",
+  "name": "daily_digest_for_user",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e6669b72-884f-4861-90c1-9697030d0b1e",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f4784402-7b95-4eb4-a171-6fc976ce55bc",
+              "name": "user_id",
+              "value": "=a94c3aff-af52-400c-a76b-cb96f5f4bacc",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "612b1897-04fd-4bac-9585-0bb1fafdafc8",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat_id }}",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2256,
+        -384
+      ],
+      "id": "fc87de0b-53f5-4374-8b66-6e0b8a57774d",
+      "name": "Send digest",
+      "webhookId": "05501303-a7bc-446a-a41e-26a6205bca80",
+      "credentials": {
+        "telegramApi": {
+          "id": "E8swXBEqtCkrtAro",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const candidates = $(\"Get candidates\").all().map(c => c.json);\nconst scores = items.map(i => i.json);\nconst chatId = candidates[0]?.telegram_chat_id;\n\n// Merge candidates with relevance scores\nconst merged = candidates.map((c, idx) => ({\n  ...c,\n  relevance_score: scores[idx]?.relevance_score ?? 0,\n  reasoning: scores[idx]?.reasoning ?? \"\",\n}));\n\n// Filter: score >= 6, max 3 per idea\nconst byIdea = {};\nconst passed = [];\nfor (const m of merged) {\n  byIdea[m.idea_id] = (byIdea[m.idea_id] || 0) + 1;\n  if (byIdea[m.idea_id] === 1) {\n    passed.push(m);\n  } else if (m.relevance_score >= 4 && byIdea[m.idea_id] <= 3) {\n    passed.push(m);\n  }\n}\n\nif (passed.length === 0) {\n  return [{ json: {\n    has_papers: false,\n    telegram_chat_id: chatId,\n    user_id: $(\"Set\").item.json.user_id,\n  }}];\n}\n\n// Group by project\nconst projects = {};\nfor (const p of passed) {\n  if (!projects[p.project_id]) {\n    projects[p.project_id] = { title: p.project_title, ideas: {} };\n  }\n  if (!projects[p.project_id].ideas[p.idea_id]) {\n    projects[p.project_id].ideas[p.idea_id] = { title: p.idea_title, papers: [] };\n  }\n  projects[p.project_id].ideas[p.idea_id].papers.push({\n    title: p.paper_title,\n    url: p.paper_url,\n    arxiv_id: p.arxiv_id,\n    score: p.relevance_score,\n    reasoning: p.reasoning,\n    paper_id: p.paper_id,\n    idea_id: p.idea_id,\n  });\n}\n\n// Format message\nlet msg = \"📬 Дневной дайджест статей\\n\";\nfor (const [pid, proj] of Object.entries(projects)) {\n  msg += `\\n📁 Проект: ${proj.title}\\n`;\n  for (const [iid, idea] of Object.entries(proj.ideas)) {\n    msg += `\\n  💡 Идея: ${idea.title}\\n`;\n    for (const paper of idea.papers) {\n      msg += `    • Статья: ${paper.title}\\n`;\n      msg += `      Релевантность: ${paper.score}/10 — ${paper.reasoning}\\n`;\n      msg += `      ${paper.url}\\n`;\n    }\n  }\n}\n\nmsg = msg.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\n\nreturn [{\n  json: {\n    has_papers: true,\n    telegram_chat_id: chatId,\n    message: msg,\n    matched_papers: passed.map(p => ({\n      idea_id: p.idea_id,\n      paper_id: p.paper_id,\n      cosine_similarity: p.cosine_similarity,\n      relevance_score: p.relevance_score,\n      reasoning: p.reasoning,\n    })),\n    project_ids: [...new Set(passed.map(p => p.project_id))],\n    paper_ids: [...new Set(passed.map(p => p.paper_id))],\n    user_id: candidates[0]?.user_id || $(\"Set\").item.json.user_id,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -96
+      ],
+      "id": "2b1ab168-835d-4349-b780-04cb880bf938",
+      "name": "Build digest"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e3a6c4d2-d638-4f4e-8eb9-4ac1421f5024",
+              "leftValue": "={{ $json.has_papers }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1504,
+        -144
+      ],
+      "id": "6e7766dc-1ab4-4031-896e-0dc0615d71ec",
+      "name": "IF: \"Has papers?\""
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "de94da9b-77f4-4273-ab8d-3e0a6593fefe",
+              "leftValue": "={{ $json.idea_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        640,
+        16
+      ],
+      "id": "82113fd5-2d4b-4add-b06e-c7f10559454b",
+      "name": "IF: \"Has candidates?\""
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  u.telegram_chat_id,\n  i.id            AS idea_id,\n  i.title         AS idea_title,\n  i.description   AS idea_description,\n  i.project_id,\n  pr.title        AS project_title,\n  c.paper_id,\n  c.paper_title,\n  c.paper_abstract,\n  c.paper_url,\n  c.arxiv_id,\n  c.cosine_similarity\nFROM ideas i\nJOIN projects pr ON pr.id = i.project_id\nJOIN users u ON u.id = i.user_id\nCROSS JOIN LATERAL (\n  SELECT\n    p.id                                AS paper_id,\n    p.title                             AS paper_title,\n    p.abstract                          AS paper_abstract,\n    p.url                               AS paper_url,\n    p.arxiv_id,\n    1 - (pe.embedding <=> i.embedding)  AS cosine_similarity\n  FROM paper_embeddings pe\n  JOIN papers p ON p.id = pe.paper_id\n  WHERE p.created_at > now() - INTERVAL '24 hours'\n    AND p.ingested_via = 'scheduled'\n  ORDER BY pe.embedding <=> i.embedding\n  LIMIT 5\n) c\nWHERE i.user_id = '{{ $('Set').item.json.user_id }}'::UUID\n  AND i.status  = 'active'\n  AND pr.status = 'active'\nORDER BY i.id, c.cosine_similarity DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        432,
+        0
+      ],
+      "id": "e8021eb3-449b-4907-8572-4e615a69bc27",
+      "name": "Get candidates",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const digest = $(\"Build digest\").first().json;\nconst tgFirst = $(\"Send digest\").first().json;\n\nconst projectArr = \"{\" + digest.project_ids.join(\",\") + \"}\";\nconst paperArr = \"{\" + digest.paper_ids.join(\",\") + \"}\";\n\nreturn digest.matched_papers.map(m => ({\n  json: {\n    user_id: digest.user_id,\n    idea_id: m.idea_id,\n    paper_id: m.paper_id,\n    cosine_similarity: m.cosine_similarity,\n    relevance_score: m.relevance_score,\n    reasoning: m.reasoning,\n    project_ids_pg: projectArr,\n    paper_ids_pg: paperArr,\n    message: digest.message,\n    telegram_message_id: tgFirst.result?.message_id || null,\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        -368
+      ],
+      "id": "8eabca83-2cba-4e7a-9593-05535bc30238",
+      "name": "Split matches"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO digest_history (user_id, digest_date, project_ids, paper_ids, message_text, telegram_message_id)\nVALUES (\n  '{{ $json.user_id }}'::UUID,\n  CURRENT_DATE,\n  '{{ $json.project_ids_pg }}'::UUID[],\n  '{{ $json.paper_ids_pg }}'::UUID[],\n  $${{ $json.message }}$$,\n  {{ $json.telegram_message_id || 'NULL' }}\n)\nON CONFLICT DO NOTHING;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2976,
+        -368
+      ],
+      "id": "8e3eb7e8-4c79-49b5-8167-6f26e16ad06e",
+      "name": "Record history",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO idea_paper_matches (idea_id, paper_id, cosine_similarity, llm_relevance_score, llm_reasoning, delivered_in_digest, delivered_at, source)\nVALUES (\n  '{{ $json.idea_id }}'::UUID,\n  '{{ $json.paper_id }}'::UUID,\n  {{ $json.cosine_similarity }},\n  {{ $json.relevance_score }},\n  $${{ $json.reasoning }}$$,\n  TRUE,\n  now(),\n  'daily_digest'\n)\nON CONFLICT (idea_id, paper_id) DO UPDATE SET\n  delivered_in_digest = TRUE,\n  delivered_at = now();",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2992,
+        -176
+      ],
+      "id": "c710213c-c8de-488a-b329-c2557c880780",
+      "name": "Record match",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "zVnChoDhQmH6we3m",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/zVnChoDhQmH6we3m",
+          "cachedResultName": "relevance_score"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "idea_id": "={{ $json.idea_id }}",
+            "paper_id": "={{ $json.arxiv_id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "idea_id",
+              "displayName": "idea_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "paper_id",
+              "displayName": "paper_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        928,
+        -96
+      ],
+      "id": "8f2f3a45-703d-4dc7-91dd-0f5ae1a02e45",
+      "name": "Call 'relevance_score'"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat_id }}",
+        "text": "📭 Сегодня подходящих новых статей не нашлось",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2000,
+        208
+      ],
+      "id": "2268b6c8-a379-4a59-9add-075cdf950a5f",
+      "name": "Send info about empty digest",
+      "webhookId": "05501303-a7bc-446a-a41e-26a6205bca80",
+      "credentials": {
+        "telegramApi": {
+          "id": "E8swXBEqtCkrtAro",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.message;\nconst MAX = 4000;\nconst chunks = [];\n\nlet remaining = text;\nwhile (remaining.length > MAX) {\n  let cut = remaining.lastIndexOf('\\n', MAX);\n  if (cut <= 0) cut = MAX;\n  chunks.push(remaining.slice(0, cut));\n  remaining = remaining.slice(cut).trimStart();\n}\nchunks.push(remaining);\n\nreturn chunks.map(c => ({ json: { ...$json, message: c } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        -384
+      ],
+      "id": "65f77e0a-ceef-4aa3-a112-d4d526bd6af0",
+      "name": "(Maybe) Split message into smaller ones"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Get candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send digest": {
+      "main": [
+        [
+          {
+            "node": "Split matches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build digest": {
+      "main": [
+        [
+          {
+            "node": "IF: \"Has papers?\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: \"Has candidates?\"": {
+      "main": [
+        [
+          {
+            "node": "Call 'relevance_score'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF: \"Has papers?\"": {
+      "main": [
+        [
+          {
+            "node": "(Maybe) Split message into smaller ones",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send info about empty digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get candidates": {
+      "main": [
+        [
+          {
+            "node": "IF: \"Has candidates?\"",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split matches": {
+      "main": [
+        [
+          {
+            "node": "Record history",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Record match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'relevance_score'": {
+      "main": [
+        [
+          {
+            "node": "Build digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "(Maybe) Split message into smaller ones": {
+      "main": [
+        [
+          {
+            "node": "Send digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9qLJPkzSbPAxHeud",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "92968940-f20a-40a7-88d5-9a272cce5bb1",
+  "activeVersionId": "92968940-f20a-40a7-88d5-9a272cce5bb1",
+  "versionCounter": 159,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T16:44:22.817Z",
+      "createdAt": "2026-04-15T16:44:22.817Z",
+      "role": "workflow:owner",
+      "workflowId": "J73g67dlY8p6KdPD",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 92968940",
+    "description": ""
+  }
+}

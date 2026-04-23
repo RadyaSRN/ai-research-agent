@@ -1,0 +1,242 @@
+{
+  "updatedAt": "2026-04-21T10:14:14.786Z",
+  "createdAt": "2026-04-15T11:30:34.360Z",
+  "id": "dAY5oaMsv4NZfAJa",
+  "name": "update_idea_status",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "user_id"
+            },
+            {
+              "name": "idea_id"
+            },
+            {
+              "name": "new_status"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e8584543-fe77-4dbb-a1ee-a9988454b1c9",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "423e154a-5a64-4355-8683-25b2e186748e",
+              "name": "user_id",
+              "value": "={{$json.user_id}}",
+              "type": "string"
+            },
+            {
+              "id": "0588b4e2-ad96-494e-9d7e-d7b43b45c14f",
+              "name": "idea_id",
+              "value": "={{$json.idea_id}}",
+              "type": "string"
+            },
+            {
+              "id": "fc98c45e-fe86-4878-8db2-dc28006189e2",
+              "name": "new_status",
+              "value": "={{$json.new_status}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "dfa1262f-f58d-437a-8c87-28c045ed20e9",
+      "name": "Set"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE ideas\nSET\n  status = '{{$('Set').item.json.new_status}}',\n  updated_at = now()\nWHERE\n  id = '{{$('Set').item.json.idea_id}}'\n  AND user_id = '{{$('Set').item.json.user_id}}'\nRETURNING id, title, status;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        0
+      ],
+      "id": "475ec152-f202-4c66-8e09-b07859d729cc",
+      "name": "Update idea status",
+      "credentials": {
+        "postgres": {
+          "id": "nw2LCxyZB00C6uhs",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3a971acb-5d6f-4f46-a392-e318c3ecef66",
+              "leftValue": "={{$json.id}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "ac8d5b07-1e79-4961-af23-2ab65629cb1a",
+      "name": "If id exists"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: false,\n      error: \"idea not found or not yours\",\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        96
+      ],
+      "id": "b8d9fbe9-c60b-4217-b26a-f1ae266a8099",
+      "name": "Not found"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      success: true,\n      idea_id: $json.id,\n      title: $json.title,\n      new_status: $json.status,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "ea130708-1b2f-4d86-9790-a8eaa39475e1",
+      "name": "Success"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "Update idea status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update idea status": {
+      "main": [
+        [
+          {
+            "node": "If id exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If id exists": {
+      "main": [
+        [
+          {
+            "node": "Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "ef7a2c92-9988-4b42-8e56-8603c5a7b5dc",
+  "activeVersionId": "ef7a2c92-9988-4b42-8e56-8603c5a7b5dc",
+  "versionCounter": 28,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-15T11:30:34.360Z",
+      "createdAt": "2026-04-15T11:30:34.360Z",
+      "role": "workflow:owner",
+      "workflowId": "dAY5oaMsv4NZfAJa",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version ef7a2c92",
+    "description": ""
+  }
+}

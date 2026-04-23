@@ -1,0 +1,245 @@
+{
+  "updatedAt": "2026-04-22T17:51:16.588Z",
+  "createdAt": "2026-04-22T10:49:42.252Z",
+  "id": "QYks9gReS6pL7kMT",
+  "name": "mcp_server",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "bearerAuth",
+        "path": "f91bcc69-9e41-4e5d-b4d8-30e43f6be178"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "e37d39dc-61e7-4ea7-b162-d4a8bde8c85e",
+      "name": "MCP Server Trigger",
+      "webhookId": "f91bcc69-9e41-4e5d-b4d8-30e43f6be178",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "BttLHgghGsEE7NHG",
+          "name": "MCP Auth Token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Semantic search over the user's personal research paper corpus (pgvector).\nALWAYS USE THIS FIRST when the user asks about papers, articles, research\ntopics, or specific scientific concepts — before attempting grep, database\nqueries, or web search. Returns top-K papers with similarity scores.",
+        "workflowId": {
+          "__rl": true,
+          "value": "wsrsedBE9ooBeECD",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/wsrsedBE9ooBeECD",
+          "cachedResultName": "semantic_search_papers"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "query": "={{ $fromAI(\"query\", \"Natural language search query using canonical terminology, e.g. 'classifier-free guidance in diffusion models'\") }}",
+            "top_k": "={{ $fromAI(\"top_k\", \"Number of top results to return, default 10, max 50\", \"number\", 10) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "top_k",
+              "displayName": "top_k",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        96,
+        208
+      ],
+      "id": "9952863b-9854-4e33-9941-55a094e254fa",
+      "name": "Call 'semantic_search_papers'"
+    },
+    {
+      "parameters": {
+        "description": "Live search on the arXiv API. Two modes: (1) keyword search — pass `query` with canonical phrases; (2) direct lookup — pass `arxiv_id` to fetch a specific paper. Found papers are auto-ingested into the user's corpus. Use when you need fresh or specific papers not yet in the local library.",
+        "workflowId": {
+          "__rl": true,
+          "value": "hUojeucml5ZbAHqe",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/hUojeucml5ZbAHqe",
+          "cachedResultName": "arxiv_search"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "00000000-0000-0000-0000-000000000000",
+            "query": "={{ $fromAI(\"query\", \"arXiv search query using canonical phrases without quotes, e.g. diffusion guidance OR classifier-free guidance. Leave empty if looking up a specific arxiv_id.\") }}",
+            "arxiv_id": "={{ $fromAI(\"arxiv_id\", \"Exact arxiv_id to fetch, e.g. 2401.12345 or 2401.12345v1. Leave empty when doing a text search.\") }}",
+            "sort_by": "={{ $fromAI(\"sort_by\", \"Sort field: one of relevance, lastUpdatedDate, submittedDate. Default submittedDate.\", \"string\", \"submittedDate\") }}",
+            "sort_order": "={{ $fromAI(\"sort_order\", \"Sort direction: ascending or descending. Default descending.\", \"string\", \"descending\") }}",
+            "max_results": "={{ $fromAI(\"max_results\", \"Number of results, default 10, max 50\", \"number\", 10) }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sort_by",
+              "displayName": "sort_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "max_results",
+              "displayName": "max_results",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "arxiv_id",
+              "displayName": "arxiv_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "sort_order",
+              "displayName": "sort_order",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        336,
+        224
+      ],
+      "id": "fa8f4014-a9f0-4fc7-aa4b-f8dbd25a025b",
+      "name": "Call 'arxiv_search'"
+    }
+  ],
+  "connections": {
+    "Call 'semantic_search_papers'": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'arxiv_search'": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9qLJPkzSbPAxHeud",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "b52ffa74-158c-45ed-a1cf-a7bfd2272941",
+  "activeVersionId": "b52ffa74-158c-45ed-a1cf-a7bfd2272941",
+  "versionCounter": 33,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-04-22T10:49:42.252Z",
+      "createdAt": "2026-04-22T10:49:42.252Z",
+      "role": "workflow:owner",
+      "workflowId": "QYks9gReS6pL7kMT",
+      "projectId": "LQlSPgCOpK5UqmRi",
+      "project": {
+        "updatedAt": "2026-04-13T14:09:18.447Z",
+        "createdAt": "2026-04-13T13:31:51.826Z",
+        "id": "LQlSPgCOpK5UqmRi",
+        "name": "Research Agent <rodionsurin@outlook.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "6522aeb4-c3cd-45eb-a107-c97cbbb614b8"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version b52ffa74",
+    "description": ""
+  }
+}
